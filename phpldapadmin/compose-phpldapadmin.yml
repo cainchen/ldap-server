@@ -1,0 +1,75 @@
+version: '3.5'
+services:
+  ldap:
+    image : sealeo/openldap
+    restart: always
+    container_name: ldapserver
+    hostname: ldap.domain.local
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/ldap/data:/var/lib/ldap
+    ports:
+      - 389:389
+      - 80:80
+    environment:
+      - LDAP_PASSWORD=password
+      - LDAP_ORGANISATION="LDAP Server"
+      - LDAP_DOMAIN=domain.local
+      - LDAP_SERVERNAME=ldap.domain.local
+    extra_hosts:
+      - ldap.domain.local:192.168.x.x
+    dns:
+      - 192.168.x.x
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 300M
+        reservations:
+          cpus: '0.25'
+          memory: 20M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-S", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+#    logging:
+#      driver: syslog
+#      options:
+#        syslog-address: "tcp://192.168.x.x:123"
+  ldapssp:
+    depends_on:
+      - ldap
+    image : grams/ltb-self-service-password
+    restart: always
+    container_name: ldapssp
+    hostname: ldapssp.domain.local
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/self-service-password:/usr/share/self-service-password
+    ports:
+      - 81:80
+    extra_hosts:
+      - ldap.domain.local:192.168.x.x
+      - ldapssp.domain.local:192.168.x.x
+    dns:
+      - 192.168.x.x
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.05'
+          memory: 30M
+        reservations:
+          cpus: '0.025'
+          memory: 15M
+#    logging:
+#      driver: syslog
+#      options:
+#        syslog-address: "tcp://192.168.x.x:123"
